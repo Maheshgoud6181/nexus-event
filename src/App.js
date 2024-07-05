@@ -1,116 +1,121 @@
-import logo from './logo.svg';
-import { useEffect, useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import './App.css';
-import Score from './Score';
+import logo from './logo.svg';
+
 function App() {
- const[submit,setSubmitbtn]=useState(false);
   const quizData = [
     {
-      question: "What does HTML stand for?",
-      options: [
-        "Hyper Text Markup Language",
-        "Home Tool Markup Language",
-        "Hyperlinks and Text Markup Language",
-        "Hyper Text Makeup Language"
-      ],
-      answer: "Hyper Text Markup Language"
+      questionParts: ["When the ", " effect works a little too "],
+      answer: ["greenhouse", "good"],
+      image: "image6.png"
     },
     {
-      question: "Which HTML tag is used to define an internal style sheet?",
-      options: ["<style>", "<css>", "<script>", "<link>"],
-      answer: "<style>"
+      questionParts: ["When you're trying to enjoy the weekend ", " but you have wormed the planet to inhabitable "],
+      answer: ["outdoor", "heat"],
+      image: "image1.png"
     },
     {
-      question: "Choose the correct HTML element for the largest heading:",
-      options: ["<h1>", "<heading>", "<h6>", "<head>"],
-      answer: "<h1>"
+      questionParts: ["Not sure if you don't know how to ", " or if you hate ", " creatured"],
+      answer: ["recycle", "innocent"],
+      image: "image2.png"
     },
     {
-      question: "Which HTML element is used to define the title of a document?",
-      options: ["<meta>", "<title>", "<head>", "<header>"],
-      answer: "<title>"
-    },
-    {
-      question: "What is the correct HTML element for inserting a line break?",
-      options: ["<br>", "<lb>", "<break>", "<newline>"],
-      answer: "<br>"
+      questionParts: ["Vegans when they ", " what makes fossil "],
+      answer: ["realise", "fuels"],
+      image: "image3.png"
     }
   ];
-    const[index,setIndex]=useState(0);
-    const[arrAns,setarrAnswer]=useState(Array(quizData.length).fill(null));
-    const[selectedOption,setSelectOption]=useState("");
-    const[showscore,setScored]=useState(false);
-    function handleAns(option){
-      setSelectOption(option);
-      let newarr=[...arrAns];
-      
-       if(option==quizData[index].answer){
-        newarr[index]=quizData[index].answer;
-        setarrAnswer(newarr);
-       }
 
-       }
-    function totalscore(){
-     return arrAns.reduce((scores,answer,index)=>{
-        if(answer === quizData[index].answer){
-         return scores+1;}
-        return scores;
-      },0);
-    };
-    function nextq(){
-      
-        if(index<quizData.length-1){
-          setIndex(index+1);
-          setSelectOption("");
-       }
-         
-      }
-      function prevs(){
-        setSubmitbtn(false);
-        if(index==0){
-          setIndex(quizData.length-1);
-        }else{
-          setIndex(index-1);
-        }
+  const [index, setIndex] = useState(0);
+  const [userAnswers, setUserAnswers] = useState(quizData.map(q => q.answer.map(ans => Array(ans.length).fill(""))));
+  const [showscore, setShowscore] = useState(false);
+  const inputRefs = useRef([]);
 
+  useEffect(() => {
+    inputRefs.current = inputRefs.current.slice(0, quizData[index].answer.reduce((sum, ans) => sum + ans.length, 0));
+  }, [index]);
+
+  function handleInputChange(e, answerIndex, charIndex) {
+    const newAnswers = [...userAnswers];
+    newAnswers[index][answerIndex][charIndex] = e.target.value;
+    setUserAnswers(newAnswers);
+
+    if (e.target.value && charIndex < newAnswers[index][answerIndex].length - 1) {
+      inputRefs.current[calculateInputIndex(answerIndex, charIndex) + 1].focus();
+    }
+  }
+
+  function handleKeyDown(e, answerIndex, charIndex) {
+    if (e.key === 'Backspace' && !userAnswers[index][answerIndex][charIndex]) {
+      const prevIndex = calculateInputIndex(answerIndex, charIndex) - 1;
+      if (prevIndex >= 0) {
+        inputRefs.current[prevIndex].focus();
       }
-    
-  function handleOption(option){
-    
-    handleAns(option);
-  }  
+    }
+  }
+
+  function calculateInputIndex(answerIndex, charIndex) {
+    return quizData[index].answer.slice(0, answerIndex).reduce((sum, ans) => sum + ans.length, 0) + charIndex;
+  }
+
+  function totalscore() {
+    return userAnswers.reduce((score, userAnswer, i) => {
+      const correctAnswers = quizData[i].answer;
+      const isCorrect = userAnswer.every((answer, j) => answer.join('').trim().toLowerCase() === correctAnswers[j].toLowerCase());
+      return score + (isCorrect ? 1 : 0);
+    }, 0);
+  }
+
+  function nextq() {
+    if (index < quizData.length - 1) {
+      setIndex(index + 1);
+    }
+  }
+
+  function prevs() {
+    if (index > 0) {
+      setIndex(index - 1);
+    }
+  }
+
   return (
-
-
     <div className='container'>
-     
-      {showscore?<h1>Total Score:{totalscore()}/{quizData.length}</h1>:(
+      {showscore ? (
+        <h1>Total Score: {totalscore()}/{quizData.length}</h1>
+      ) : (
         <div>
-            <h1>Q.{index+1})&emsp;{quizData[index].question}</h1>
-           <ul type="none"> {quizData[index].options.map((option)=>(
-            
-              <li >
-                <label>
-            <input type="radio" name={index} checked={selectedOption === option} value={option} 
-            onChange={()=>handleOption(option)} />
-            {option}
-            </label>
-            </li>
-           
-            
+          <h1 className='question'>
+            Q.{index + 1})&emsp;
+            {quizData[index].questionParts.map((part, partIndex) => (
+              <span key={partIndex}>
+                {part}
+                {partIndex < quizData[index].answer.length && quizData[index].answer[partIndex].split('').map((char, charIndex) => (
+                  <input
+                    key={charIndex}
+                    type="text"
+                    maxLength="1"
+                    value={userAnswers[index][partIndex][charIndex]}
+                    onChange={(e) => handleInputChange(e, partIndex, charIndex)}
+                    onKeyDown={(e) => handleKeyDown(e, partIndex, charIndex)}
+                    ref={el => inputRefs.current[calculateInputIndex(partIndex, charIndex)] = el}
+                    className="blank-input"
+                  />
+                ))}
+              </span>
             ))}
-            </ul>
-            &emsp;<button className='pre' onClick={prevs}>Prev </button>
-           {index==quizData.length-1?<button className='submit' onClick={()=>setScored(true)}>Submit</button>
-            : <button className='nextbtn' onClick={nextq}>Next 
-            </button>}
-            
-            
-            </div>
-    )}
-    
+          </h1>
+          {quizData[index].image && (
+            <img src={quizData[index].image} alt={`Question ${index + 1}`} className="question-image" />
+          )}
+          &emsp;<button className='pre' onClick={prevs}>Prev</button>
+          {index === quizData.length - 1 ? (
+            <button className='submit' onClick={() => setShowscore(true)}>Submit</button>
+          ) : (
+            <button className='nextbtn' onClick={nextq}>Next</button>
+          )}
+        </div>
+      )}
     </div>
-          
   );
 }
 
